@@ -187,7 +187,7 @@ async function extractDominantColors(imageBuffer: Buffer): Promise<ColorAnalysis
   const image = await Jimp.read(imageBuffer);
 
   // Redimensionar para análisis rápido
-  image.resize({ w: 100, h: 100 });
+  image.resize(100, 100);
 
   const colorMap = new Map<string, number>();
 
