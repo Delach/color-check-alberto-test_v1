@@ -1,0 +1,110 @@
+openapi: 3.1.0
+info:
+  title: Color Accessibility Checker
+  description: API for analyzing color accessibility, checking contrast ratios, and simulating vision deficiencies.
+  version: 1.0.0
+servers:
+  - url: https://your-ngrok-url.ngrok-free.app
+    description: Development Server
+paths:
+  /api/analyze-colors:
+    post:
+      operationId: analyzeColors
+      summary: Analyze a list of hex colors for accessibility.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                colors:
+                  type: array
+                  items:
+                    type: string
+                    description: Hex color code (e.g., #FF0000)
+              required:
+                - colors
+      responses:
+        "200":
+          description: Analysis results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      type: object
+                  ui_url:
+                    type: string
+                    description: URL to render the results widget
+  /api/analyze-website:
+    post:
+      operationId: analyzeWebsite
+      summary: Extract and analyze dominant colors from a website.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  description: Full URL of the website to analyze (e.g., https://google.com)
+              required:
+                - url
+      responses:
+        "200":
+          description: Website analysis results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  url:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      type: object
+                  ui_url:
+                    type: string
+                    description: URL to render the results widget
+  /api/analyze-image:
+    post:
+      operationId: analyzeImage
+      summary: Analyze dominant colors from an uploaded image.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Image analysis results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  dominantColors:
+                    type: array
+                    items:
+                      type: object
+                  ui_url:
+                    type: string
+                    description: URL to render the results widget

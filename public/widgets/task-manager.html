@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Task Manager Widget</title>
+    <style>
+      body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; padding:16px; }
+      .task { padding:8px; border:1px solid #eee; border-radius:6px; margin:6px 0 }
+      .title { font-weight:600 }
+    </style>
+  </head>
+  <body>
+    <h3>Widget - Tareas</h3>
+    <div id="tasks">Cargando...</div>
+
+    <script>
+      async function load() {
+        try {
+          const res = await fetch('/api/dummy-tasks');
+          if (!res.ok) {
+            document.getElementById('tasks').innerText = 'Error cargando tareas';
+            return;
+          }
+          const data = await res.json();
+          const container = document.getElementById('tasks');
+          container.innerHTML = '';
+          (data.tasks || []).forEach(t => {
+            const el = document.createElement('div');
+            el.className = 'task';
+            el.innerHTML = `<div class="title">${t.title}</div><div>${t.description || ''}</div>`;
+            container.appendChild(el);
+          });
+        } catch (err) {
+          document.getElementById('tasks').innerText = 'Error: ' + String(err);
+        }
+      }
+      load();
+    </script>
+  </body>
+</html>

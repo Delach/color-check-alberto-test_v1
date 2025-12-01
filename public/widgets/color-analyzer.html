@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Color Accessibility Checker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    }
+  </style>
+</head>
+
+<body class="bg-[#f7f7f8] p-4">
+  <div class="bg-white border border-[#d9d9e3] rounded-2xl w-full max-w-2xl mx-auto shadow-lg">
+    <!-- Header -->
+    <div class="border-b border-[#d9d9e3] p-6">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-[#0d0d0d]">
+          Color Accessibility Checker ✓
+        </h1>
+        <button class="bg-[#4c6fff] text-white px-3 py-1.5 rounded-lg text-sm hover:opacity-90 transition-opacity"
+          onclick="window.open('https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html', '_blank')">
+          📖 WCAG
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="p-6 border-b border-[#d9d9e3]">
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-[#f7f7f8] rounded-lg p-4 text-center">
+          <div class="text-3xl mb-1">✅</div>
+          <div class="text-2xl font-bold text-[#0d0d0d]" id="total-colors">0</div>
+          <div class="text-sm text-[#6e6e80]">Colors</div>
+        </div>
+        <div class="bg-[#f7f7f8] rounded-lg p-4 text-center">
+          <div class="text-3xl mb-1">⚠️</div>
+          <div class="text-2xl font-bold text-[#ef4444]" id="failures">0</div>
+          <div class="text-sm text-[#6e6e80]">Failures</div>
+        </div>
+        <div class="bg-[#f7f7f8] rounded-lg p-4 text-center">
+          <div class="text-3xl mb-1">👁️</div>
+          <div class="text-2xl font-bold text-[#0d0d0d]" id="texts">0</div>
+          <div class="text-sm text-[#6e6e80]">Texts</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="border-b border-[#d9d9e3] p-4 flex gap-2">
+      <button class="px-4 py-2 rounded-lg font-semibold bg-[#4c6fff] text-white">
+        Colors
+      </button>
+      <button class="px-4 py-2 rounded-lg font-semibold bg-[#ececf1] text-[#0d0d0d]" disabled>
+        Vision
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="p-6 space-y-4" id="colors-container">
+      <div class="text-center text-[#6e6e80] py-8">
+        Loading colors...
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function loadColors() {
+      const params = new URLSearchParams(window.location.search);
+      let colors = [];
+
+      if (params.has('colors')) {
+        colors = params.get('colors').split(',').filter(c => c.trim());
+      }
+
+      if (colors.length === 0) {
+        // Fallback: fetch example colors from API
+        try {
+          const res = await fetch('/api/example-colors');
+          const data = await res.json();
+          colors = data.colors || [];
+        } catch (e) {
+          document.getElementById('colors-container').innerHTML = '<div class="text-center text-[#ef4444] py-8">Error loading colors</div>';
+          return;
+        }
+      }
+
+      if (colors.length === 0) {
+        document.getElementById('colors-container').innerHTML = '<div class="text-center text-[#6e6e80] py-8">No colors found</div>';
+        return;
+      }
+
+      // Update stats
+      document.getElementById('total-colors').textContent = colors.length;
+      document.getElementById('failures').textContent = colors.filter(c => !checkWCAG(c, '#FFFFFF').wcagAAA).length;
+      document.getElementById('texts').textContent = colors.length;
+
+      // Render color cards
+      const container = document.getElementById('colors-container');
+      container.innerHTML = '';
+
+      colors.forEach((color, idx) => {
+        const analysis = checkWCAG(color, '#FFFFFF');
+        const corrected = suggestColor(color, 7.0, '#FFFFFF');
+
+        const card = document.createElement('div');
+        card.className = 'border border-[#d9d9e3] rounded-lg p-4';
+        card.innerHTML = `
+          <div class="mb-3">
+            <span class="text-xs text-[#6e6e80] font-semibold">Original</span>
+          </div>
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-full h-20 rounded-lg border-2 border-[#d9d9e3] flex items-center justify-center text-sm font-bold" style="background-color: ${color}; color: ${analysis.ratio >= 4.5 ? '#000000' : '#FFFFFF'}">
+              Aa
+            </div>
+            <div class="flex-shrink-0">
+              <div class="text-sm font-bold text-[#0d0d0d]">Ratio:</div>
+              <div class="text-2xl font-bold ${analysis.wcagAAA ? 'text-[#10a37f]' : 'text-[#ef4444]'}">${analysis.ratio.toFixed(1)}:1</div>
+              <span class="px-2 py-1 ${analysis.wcagAAA ? 'bg-[#10a37f]' : analysis.wcagAA ? 'bg-yellow-500' : 'bg-[#ef4444]'} text-white text-xs rounded font-semibold inline-block mt-1">
+                ${analysis.wcagAAA ? 'AAA ✓' : analysis.wcagAA ? 'AA ✓' : 'Fail'}
+              </span>
+            </div>
+          </div>
+          <div class="text-xs text-[#6e6e80] mb-1">
+            <span class="font-mono font-bold text-[#0d0d0d]">${color}</span> fg: #FFFFFF
+          </div>
+          ${!analysis.wcagAAA ? `
+            <div class="border-t border-[#d9d9e3] pt-3 mt-3">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs text-[#6e6e80] font-semibold">Original</span>
+                <span class="text-xs text-[#10a37f] font-semibold flex items-center gap-1">
+                  ✅ Corregido
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="h-16 rounded border-2 border-[#d9d9e3] flex items-center justify-center text-sm font-bold" style="background-color: ${color}; color: #FFFFFF">
+                  Aa
+                </div>
+                <div class="h-16 rounded border-2 border-[#4c6fff] flex items-center justify-center text-sm font-bold" style="background-color: ${corrected}; color: #FFFFFF">
+                  Aa
+                </div>
+              </div>
+              <div class="mt-2 text-xs text-[#6e6e80]">
+                <span class="font-mono font-bold text-[#0d0d0d]">${corrected}</span> 
+                <span class="text-[#10a37f] font-semibold">Contraste mejorado</span>
+              </div>
+            </div>
+          ` : ''}
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function checkWCAG(fg, bg) {
+      const ratio = calculateContrast(fg, bg);
+      return {
+        ratio,
+        wcagAA: ratio >= 4.5,
+        wcagAAA: ratio >= 7.0
+      };
+    }
+
+    function calculateContrast(fgHex, bgHex) {
+      const fgLum = getLuminance(fgHex);
+      const bgLum = getLuminance(bgHex);
+      const lighter = Math.max(fgLum, bgLum);
+      const darker = Math.min(fgLum, bgLum);
+      return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    function getLuminance(hex) {
+      const rgb = hexToRgb(hex);
+      const [r, g, b] = [rgb.r, rgb.g, rgb.b].map(c => {
+        c = c / 255;
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : { r: 0, g: 0, b: 0 };
+    }
+
+    function rgbToHex(r, g, b) {
+      return '#' + [r, g, b].map(x => {
+        const hex = Math.round(x).toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+      }).join('').toUpperCase();
+    }
+
+    function suggestColor(originalHex, targetRatio = 7.0, bgHex = '#FFFFFF') {
+      const original = hexToRgb(originalHex);
+      let best = originalHex;
+      let bestRatio = calculateContrast(originalHex, bgHex);
+
+      for (let brightness = 0; brightness <= 255; brightness += 5) {
+        const adjusted = rgbToHex(
+          Math.max(0, original.r - brightness),
+          Math.max(0, original.g - brightness),
+          Math.max(0, original.b - brightness)
+        );
+        const ratio = calculateContrast(adjusted, bgHex);
+        if (ratio >= targetRatio) return adjusted;
+        if (ratio > bestRatio) {
+          bestRatio = ratio;
+          best = adjusted;
+        }
+      }
+      return best;
+    }
+
+    loadColors();
+  </script>
+</body>
+
+</html>
